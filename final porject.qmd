@@ -61,4 +61,82 @@ emissions_median = df_profit_combined_filtered['Emissions'].median()
 df_profit_combined_filtered.loc[:, 'Emissions'].fillna(emissions_median, inplace=True)
 print(df_profit_combined_filtered.head())
 
+### First Part ###
+import pandas as pd
+
+# Define function to clean numeric columns
+def convert_numeric_columns(df, cols):
+    """
+    Convert specified columns to numeric after cleaning unwanted characters.
+    """
+    for col in cols:
+        if col in df.columns:
+            # Use raw strings to avoid warnings
+            df[col] = (
+                df[col]
+                .replace(r'[\$,]', '', regex=True)  # Remove dollar signs and commas
+                .replace(r'[—]', '0', regex=True)  # Replace dashes with 0
+                .replace(' ', '', regex=True)  # Remove non-breaking spaces
+            )
+            df[col] = pd.to_numeric(df[col], errors='coerce')  # Convert to numeric
+    return df
+
+# Define function to standardize column names
+def standardize_columns(df, year=None):
+    """
+    Standardize column names: lowercase, replace spaces with underscores, and add year prefix.
+    """
+    df.columns = (
+        df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('\n', '_')
+    )
+    # Add year prefix if provided, except for key columns
+    if year:
+        df = df.rename(columns=lambda x: f"{x}_{year}" if x not in ['company_name', 'industry'] else x)
+    return df
+
+# File paths for the datasets
+file_2020 = '/Users/joying/Documents/GitHub/Final Project /Data Base for FP/Public profit and emission database - 2020.csv'
+file_2021 = '/Users/joying/Documents/GitHub/Final Project /Data Base for FP/Public profit and emission database - 2021.csv'
+file_2022 = '/Users/joying/Documents/GitHub/Final Project /Data Base for FP/Public profit and emission database - 2022.csv'
+
+# Load datasets
+data_2020 = pd.read_csv(file_2020)
+data_2021 = pd.read_csv(file_2021)
+data_2022 = pd.read_csv(file_2022)
+
+# Standardize column names
+data_2020_cleaned = standardize_columns(data_2020, year=2020)
+data_2021_cleaned = standardize_columns(data_2021, year=2021)
+data_2022_cleaned = standardize_columns(data_2022, year=2022)
+
+# Convert numeric columns for each dataset
+numeric_cols_2020 = ['scope_1_ghg_emissions_tons_co₂e_2020', 'scope_2_emissions__tons_co₂e_2020', 'profit_2020']
+numeric_cols_2021 = ['2021_scope_1_emissions_tons_co₂e_2021', '2021_scope_2_emissions_tons_co₂e_2021', '2021_profit_(million_usd)_2021']
+numeric_cols_2022 = ['2022_scope_1_emissions_tons_co₂e_2022', '2022_scope_2_emissions_tons_co₂e_2022', '2022_profit_(millions_usd)_2022']
+
+data_2020_cleaned = convert_numeric_columns(data_2020_cleaned, numeric_cols_2020)
+data_2021_cleaned = convert_numeric_columns(data_2021_cleaned, numeric_cols_2021)
+data_2022_cleaned = convert_numeric_columns(data_2022_cleaned, numeric_cols_2022)
+
+# Combine datasets
+merged_data = pd.concat([data_2020_cleaned, data_2021_cleaned, data_2022_cleaned], ignore_index=True)
+
+# Drop duplicates based on 'company_name'
+if 'company_name' in merged_data.columns:
+    merged_data = merged_data.drop_duplicates(subset=['company_name'], keep='first')
+else:
+    print("Error: 'company_name' column is missing in the merged dataset.")
+
+# Check and print standardized column names
+print("Merged Dataset Columns:", merged_data.columns)
+
+# Check for missing values
+missing_values_summary = merged_data.isnull().sum()
+print("\nMissing Values Summary:")
+print(missing_values_summary)
+
+# Save cleaned and merged data for further use
+merged_data.to_csv('/Users/joying/Documents/GitHub/Final Project /Data Base for FP/merged_cleaned_data.csv', index=False)
+
+
 ```
